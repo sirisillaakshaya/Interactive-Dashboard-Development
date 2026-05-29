@@ -1,0 +1,101 @@
+import pandas as pd
+import plotly.express as px
+import streamlit as st
+
+# Page Configuration
+st.set_page_config(page_title="Interactive Dashboard", layout="wide")
+
+# Title
+st.title("📊 Interactive Dashboard Development")
+
+# Load Dataset
+@st.cache_data
+def load_data():
+    data = pd.read_csv("sales_data.csv")
+    return data
+
+df = load_data()
+
+# Sidebar Filters
+st.sidebar.header("Filter Data")
+
+region = st.sidebar.multiselect(
+    "Select Region",
+    options=df["Region"].unique(),
+    default=df["Region"].unique()
+)
+
+category = st.sidebar.multiselect(
+    "Select Category",
+    options=df["Category"].unique(),
+    default=df["Category"].unique()
+)
+
+# Filter Data
+filtered_df = df[
+    (df["Region"].isin(region)) &
+    (df["Category"].isin(category))
+]
+
+# Metrics
+total_sales = filtered_df["Sales"].sum()
+total_profit = filtered_df["Profit"].sum()
+total_orders = filtered_df["Orders"].sum()
+
+# Display Metrics
+col1, col2, col3 = st.columns(3)
+
+col1.metric("💰 Total Sales", f"${total_sales:,.2f}")
+col2.metric("📈 Total Profit", f"${total_profit:,.2f}")
+col3.metric("🛒 Total Orders", int(total_orders))
+
+st.markdown("---")
+
+# Sales by Region
+fig_region = px.bar(
+    filtered_df,
+    x="Region",
+    y="Sales",
+    color="Region",
+    title="Sales by Region"
+)
+
+# Profit by Category
+fig_category = px.pie(
+    filtered_df,
+    names="Category",
+    values="Profit",
+    title="Profit by Category"
+)
+
+# Sales Trend
+fig_trend = px.line(
+    filtered_df,
+    x="Month",
+    y="Sales",
+    color="Category",
+    markers=True,
+    title="Monthly Sales Trend"
+)
+
+# Layout
+left_col, right_col = st.columns(2)
+
+left_col.plotly_chart(fig_region, use_container_width=True)
+right_col.plotly_chart(fig_category, use_container_width=True)
+
+st.plotly_chart(fig_trend, use_container_width=True)
+
+# Show Data
+st.subheader("📄 Dataset Preview")
+st.dataframe(filtered_df)
+
+# Download Option
+csv = filtered_df.to_csv(index=False).encode('utf-8')
+
+st.download_button(
+    label="⬇ Download Filtered Data",
+    data=csv,
+    file_name='filtered_data.csv',
+    mime='text/csv',
+)
